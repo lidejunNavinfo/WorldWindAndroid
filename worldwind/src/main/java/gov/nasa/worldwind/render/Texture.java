@@ -165,10 +165,13 @@ public class Texture implements RenderResource {
     }
 
     protected void allocTexImage(DrawContext dc) {
+        // Identify the pixel storage type. In the case of depth textures, we must use UNSIGNED_SHORT or UNSIGNED_INT.
+        int type = (this.textureFormat == GLES20.GL_DEPTH_COMPONENT) ? GLES20.GL_UNSIGNED_INT : GLES20.GL_UNSIGNED_BYTE;
+
         // Allocate texture memory for the OpenGL texture 2D object. The texture memory is initialized with 0.
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0 /*level*/,
             this.textureFormat, this.textureWidth, this.textureHeight, 0 /*border*/,
-            this.textureFormat, GLES20.GL_UNSIGNED_BYTE, null /*pixels*/);
+            this.textureFormat, type, null /*pixels*/);
     }
 
     protected void loadTexImage(DrawContext dc, Bitmap bitmap) {

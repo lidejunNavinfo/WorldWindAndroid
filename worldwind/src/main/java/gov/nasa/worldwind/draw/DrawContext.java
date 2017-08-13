@@ -65,7 +65,7 @@ public class DrawContext {
 
     private int elementArrayBufferId;
 
-    private Framebuffer surfaceFramebuffer;
+    private Framebuffer scratchFramebuffer;
 
     private BufferObject unitSquareBuffer;
 
@@ -103,7 +103,7 @@ public class DrawContext {
         this.textureUnit = GLES20.GL_TEXTURE0;
         this.arrayBufferId = 0;
         this.elementArrayBufferId = 0;
-        this.surfaceFramebuffer = null;
+        this.scratchFramebuffer = null;
         this.unitSquareBuffer = null;
         Arrays.fill(this.textureId, 0);
     }
@@ -155,16 +155,18 @@ public class DrawContext {
         }
     }
 
-    public Framebuffer surfaceFramebuffer() {
-        if (this.surfaceFramebuffer != null) {
-            return this.surfaceFramebuffer;
+    public Framebuffer scratchFramebuffer() {
+        if (this.scratchFramebuffer != null) {
+            return this.scratchFramebuffer;
         }
 
         Framebuffer framebuffer = new Framebuffer();
         Texture colorAttachment = new Texture(1024, 1024, GLES20.GL_RGBA);
+        Texture depthAttachment = new Texture(1024, 1024, GLES20.GL_DEPTH_COMPONENT);
         framebuffer.attachTexture(this, colorAttachment, GLES20.GL_COLOR_ATTACHMENT0);
+        framebuffer.attachTexture(this, depthAttachment, GLES20.GL_DEPTH_ATTACHMENT);
 
-        return (this.surfaceFramebuffer = framebuffer);
+        return (this.scratchFramebuffer = framebuffer);
     }
 
     /**

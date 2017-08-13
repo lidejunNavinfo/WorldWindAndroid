@@ -8,10 +8,18 @@ package gov.nasa.worldwindx;
 import android.os.Bundle;
 import android.widget.FrameLayout;
 
+import gov.nasa.worldwind.NavigatorEvent;
+import gov.nasa.worldwind.NavigatorListener;
+import gov.nasa.worldwind.WorldWind;
 import gov.nasa.worldwind.WorldWindow;
+import gov.nasa.worldwind.geom.LookAt;
+import gov.nasa.worldwind.geom.Position;
 import gov.nasa.worldwind.globe.BasicElevationCoverage;
 import gov.nasa.worldwind.layer.BackgroundLayer;
 import gov.nasa.worldwind.layer.BlueMarbleLandsatLayer;
+import gov.nasa.worldwind.layer.RenderableLayer;
+import gov.nasa.worldwind.shape.Placemark;
+import gov.nasa.worldwind.shape.VisibilityMockup;
 import gov.nasa.worldwindx.experimental.AtmosphereLayer;
 
 /**
@@ -57,6 +65,24 @@ public class BasicGlobeActivity extends AbstractMainActivity {
 
         // Setup the World Window's elevation coverages.
         this.wwd.getGlobe().getElevationModel().addCoverage(new BasicElevationCoverage());
+
+        final RenderableLayer mockupLayer = new RenderableLayer();
+        final VisibilityMockup mockupRenderable = new VisibilityMockup(new Position());
+        final Placemark placemark = new Placemark(new Position());
+        placemark.getAttributes().setImageScale(10);
+        mockupLayer.addRenderable(mockupRenderable);
+        mockupLayer.addRenderable(placemark);
+        this.wwd.getLayers().addLayer(mockupLayer);
+
+        this.wwd.addNavigatorListener(new NavigatorListener() {
+            @Override
+            public void onNavigatorEvent(WorldWindow wwd, NavigatorEvent event) {
+                LookAt lookAt = event.getNavigator().getAsLookAt(wwd.getGlobe(), new LookAt());
+                mockupRenderable.getPosition().set(lookAt.latitude, lookAt.longitude, 2500);
+                placemark.getPosition().set(mockupRenderable.getPosition());
+                wwd.requestRedraw();
+            }
+        });
     }
 
     @Override

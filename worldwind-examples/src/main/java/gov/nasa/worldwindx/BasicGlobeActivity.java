@@ -5,10 +5,27 @@
 
 package gov.nasa.worldwindx;
 
+import android.net.Uri;
+import android.opengl.GLES20;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.view.GravityCompat;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ZoomControls;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -18,17 +35,24 @@ import gov.nasa.worldwind.NavigatorListener;
 import gov.nasa.worldwind.WorldWind;
 import gov.nasa.worldwind.WorldWindow;
 import gov.nasa.worldwind.geom.LookAt;
+import gov.nasa.worldwind.geom.Position;
 import gov.nasa.worldwind.geom.Sector;
+import gov.nasa.worldwind.globe.BasicElevationCoverage;
 import gov.nasa.worldwind.globe.Globe;
 import gov.nasa.worldwind.layer.BackgroundLayer;
 import gov.nasa.worldwind.layer.BlueMarbleLandsatLayer;
 import gov.nasa.worldwind.layer.Layer;
 import gov.nasa.worldwind.layer.LayerFactory;
 import gov.nasa.worldwind.layer.LayerList;
+import gov.nasa.worldwind.layer.RenderableLayer;
 import gov.nasa.worldwind.layer.ShowTessellationLayer;
 import gov.nasa.worldwind.ogc.Wcs100ElevationCoverage;
 import gov.nasa.worldwind.ogc.wms.WmsCapabilities;
 import gov.nasa.worldwind.ogc.wms.WmsLayer;
+import gov.nasa.worldwind.render.Color;
+import gov.nasa.worldwind.render.ImageSource;
+import gov.nasa.worldwind.shape.OmnidirectionalSensor;
+import gov.nasa.worldwind.shape.Placemark;
 import gov.nasa.worldwindx.experimental.AtmosphereLayer;
 import gov.nasa.worldwindx.support.LayerManager;
 
@@ -125,7 +149,11 @@ public class BasicGlobeActivity extends AbstractMainActivity implements Navigato
 
         initializeZoomControls();
         initializeTiltControls();
-        initializeLayers();
+
+        // Setup the World Window's layers.
+        this.wwd.getLayers().addLayer(new BackgroundLayer());
+        this.wwd.getLayers().addLayer(new BlueMarbleLandsatLayer());
+        this.wwd.getLayers().addLayer(new AtmosphereLayer());
 
         // Setup the World Window's elevation coverages.
         this.wwd.getGlobe().getElevationModel().addCoverage(new BasicElevationCoverage());

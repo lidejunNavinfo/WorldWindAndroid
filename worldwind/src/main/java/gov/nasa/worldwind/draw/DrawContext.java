@@ -337,8 +337,8 @@ public class DrawContext {
             return this.unitSphereBuffer;
         }
 
-        int numLat = 8;
-        int numLon = 16;
+        int numLat = 120;
+        int numLon = 120;
         double deltaLat = Math.PI / (numLat - 1);
         double deltaLon = 2 * Math.PI / (numLon - 1);
         float[] points = new float[numLat * numLon * 3];
@@ -371,8 +371,8 @@ public class DrawContext {
         }
 
         // Allocate a buffer to hold the indices.
-        int numLat = 8;
-        int numLon = 16;
+        int numLat = 120;
+        int numLon = 120;
         int count = ((numLat - 1) * numLon + (numLat - 2)) * 2;
         short[] elements = new short[count];
         int pos = 0, vertex = 0;

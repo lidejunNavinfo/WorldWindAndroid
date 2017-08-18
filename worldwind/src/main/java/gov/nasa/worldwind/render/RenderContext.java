@@ -15,7 +15,6 @@ import gov.nasa.worldwind.PickedObject;
 import gov.nasa.worldwind.PickedObjectList;
 import gov.nasa.worldwind.WorldWind;
 import gov.nasa.worldwind.draw.Drawable;
-import gov.nasa.worldwind.draw.DrawableList;
 import gov.nasa.worldwind.draw.DrawableQueue;
 import gov.nasa.worldwind.draw.DrawableTerrain;
 import gov.nasa.worldwind.geom.Camera;

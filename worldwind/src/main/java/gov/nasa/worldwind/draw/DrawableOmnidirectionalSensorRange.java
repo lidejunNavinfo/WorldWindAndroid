@@ -18,9 +18,7 @@ public class DrawableOmnidirectionalSensorRange implements Drawable {
 
     public double range;
 
-    public Color visibleColor = new Color();
-
-    public Color occludedColor = new Color();
+    public Color color = new Color();
 
     public BasicShaderProgram program = null;
 
@@ -44,7 +42,7 @@ public class DrawableOmnidirectionalSensorRange implements Drawable {
         this.program.enableTexture(false);
 
         // Use the drawable's color.
-        this.program.loadColor(new Color(1, 1, 1, 0.5f));
+        this.program.loadColor(this.color);
 
         BufferObject vertexBuffer = dc.unitSphereBuffer();
         if (!vertexBuffer.bindBuffer(dc)) {
@@ -62,12 +60,7 @@ public class DrawableOmnidirectionalSensorRange implements Drawable {
         this.matrix.multiplyByScale(this.range, this.range, this.range);
         this.program.loadModelviewProjection(this.matrix);
 
-        GLES20.glDepthFunc(GLES20.GL_GREATER);
-
-        // Draw the sensor geometry.
         GLES20.glVertexAttribPointer(0 /*vertexPoint*/, 3, GLES20.GL_FLOAT, false, 0 /*stride*/, 0 /*offset*/);
         GLES20.glDrawElements(GLES20.GL_TRIANGLE_STRIP, elementBuffer.getBufferLength(), GLES20.GL_UNSIGNED_SHORT, 0);
-
-        GLES20.glDepthFunc(GLES20.GL_LEQUAL);
     }
 }

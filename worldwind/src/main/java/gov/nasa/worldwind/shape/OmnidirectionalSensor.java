@@ -129,21 +129,38 @@ public class OmnidirectionalSensor extends AbstractShape implements Movable { //
     protected void makeDrawable(RenderContext rc) {
         // TODO elevation model fallback doesn't work here - relative to ground point is offset relative to ellipsoid and geometry is occluded
         // TODO frustum culling with a stateless bounding sphere
-        // Compute this sensor's position in Cartesian coordinates.
+        // Compute this sensor's position in Cartesian coordinates and its corresponding Cartesian transform.
         rc.geographicToCartesian(this.position.latitude, this.position.longitude, this.position.altitude, this.altitudeMode, this.point);
         rc.globe.cartesianToLocalTransform(this.point.x, this.point.y, this.point.z, this.transform);
-        double cameraDistance = rc.cameraPoint.distanceTo(this.point);
+
+//        // Compute an approximate Cartesian distance between the camera point and the sphere at this sensor's range.
+//        double cameraDistance = rc.cameraPoint.distanceTo(this.point);
+//        if (cameraDistance < this.range) {
+//            cameraDistance += this.range; // inside the sensor viewing the far side
+//        } else {
+//            cameraDistance -= this.range; // outside the sensor viewing the near side
+//        }
 
         // Compute the transform from sensor geometry coordinates to Cartesian coordinates.
         DrawableOmnidirectionalSensor drawable = new DrawableOmnidirectionalSensor();
         drawable.sensorTransform.set(this.transform);
         drawable.range = this.range;
         drawable.visibleColor.set(rc.pickMode ? this.pickColor : this.activeAttributes.interiorColor);
-        drawable.occludedColor.set(rc.pickMode ? this.pickColor : new Color(1, 0, 0, 0.5f)); // TODO occluded attributes
+        drawable.occludedColor.set(rc.pickMode ? this.pickColor : new Color(1, 0, 0, 0.25f)); // TODO occluded attributes
         drawable.program = (SensorProgram) rc.getShaderProgram(SensorProgram.KEY);
         if (drawable.program == null) {
             drawable.program = (SensorProgram) rc.putShaderProgram(SensorProgram.KEY, new SensorProgram(rc.resources));
         }
         rc.offerSurfaceDrawable(drawable, 0 /*z-order*/);
+
+//        DrawableOmnidirectionalSensorRange drawableRange = new DrawableOmnidirectionalSensorRange();
+//        drawableRange.sensorTransform.set(this.transform);
+//        drawableRange.range = this.range;
+//        drawableRange.color.set(new Color(1, 1, 1, 0.5f)); // TODO
+//        drawableRange.program = (BasicShaderProgram) rc.getShaderProgram(BasicShaderProgram.KEY);
+//        if (drawableRange.program == null) {
+//            drawableRange.program = (BasicShaderProgram) rc.putShaderProgram(BasicShaderProgram.KEY, new BasicShaderProgram(rc.resources));
+//        }
+//        rc.offerShapeDrawable(drawableRange, cameraDistance);
     }
 }

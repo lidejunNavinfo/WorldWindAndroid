@@ -5,9 +5,15 @@
 
 package gov.nasa.worldwindx;
 
+import android.opengl.GLES20;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.FrameLayout;
+
+import java.util.Arrays;
+
+import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.opengles.GL10;
 
 import gov.nasa.worldwind.NavigatorEvent;
 import gov.nasa.worldwind.NavigatorListener;
@@ -61,7 +67,21 @@ public class BasicGlobeActivity extends AbstractMainActivity implements Navigato
             " - three-finger tilt arcs the camera vertically around the look at position.");
 
         // Create the World Window (a GLSurfaceView) which displays the globe.
-        this.wwd = new WorldWindow(this);
+        this.wwd = new WorldWindow(this) {
+            @Override
+            public void onSurfaceCreated(GL10 unused, EGLConfig config) {
+                super.onSurfaceCreated(unused, config);
+
+                String extensions = GLES20.glGetString(GLES20.GL_EXTENSIONS);
+                String[] words = extensions.split("\\s");
+                Arrays.sort(words);
+                StringBuilder sb = new StringBuilder();
+                for (String word : words) {
+                    sb.append(word).append("\n");
+                }
+                setAboutBoxText(sb.toString());
+            }
+        };
 
         // Add the WorldWindow view object to the layout that was reserved for the globe.
         FrameLayout globeLayout = (FrameLayout) findViewById(R.id.globe);

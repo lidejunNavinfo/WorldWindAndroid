@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.LayoutRes;
+import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -64,9 +65,13 @@ public abstract class AbstractMainActivity extends AppCompatActivity
 
     protected static int selectedItemId = R.id.nav_general_globe_activity;
 
+    protected DrawerLayout drawerLayout;
+
     protected ActionBarDrawerToggle drawerToggle;
 
-    protected NavigationView navigationView;
+    protected NavigationView navigationMenu;
+
+    protected Menu optionsMenu;
 
     protected String aboutBoxTitle = "Title goes here";
 
@@ -108,23 +113,25 @@ public abstract class AbstractMainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // Add support for the navigation drawer full of examples
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        // Add support for the navigation drawer menu(s) with an ActionBarDrawerToggle that
+        // adds a Hamburger icon when a drawer is closed and an arrow when the drawer is open.
+        this.drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         this.drawerToggle = new ActionBarDrawerToggle(
-            this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(this.drawerToggle);
+            this, this.drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        this.drawerLayout.addDrawerListener(this.drawerToggle);
         this.drawerToggle.syncState();
 
-        this.navigationView = (NavigationView) findViewById(R.id.nav_view);
-        this.navigationView.setNavigationItemSelectedListener(this);
-        this.navigationView.setCheckedItem(selectedItemId);
+        // Initialize the navigation drawer menu
+        this.navigationMenu = (NavigationView) findViewById(R.id.navigation_drawer);
+        this.navigationMenu.setNavigationItemSelectedListener(this);
+        this.navigationMenu.setCheckedItem(selectedItemId);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         // Update the menu by highlighting the last selected menu item
-        this.navigationView.setCheckedItem(selectedItemId);
+        this.navigationMenu.setCheckedItem(selectedItemId);
         // Use this Activity's Handler to periodically print the FrameMetrics.
         this.handler.sendEmptyMessageDelayed(PRINT_METRICS, PRINT_METRICS_DELAY);
         // Restore the navigator's camera state from previously saved session data
@@ -143,7 +150,9 @@ public abstract class AbstractMainActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
+        getMenuInflater().inflate(R.menu.options_menu, menu);
+        // Maintain a reference to the menu so we have a convenient entry point for dynamic updates
+        this.optionsMenu = menu;
         return true;
     }
 
@@ -275,9 +284,10 @@ public abstract class AbstractMainActivity extends AppCompatActivity
 
     @Override
     public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        if (drawer.isDrawerOpen(GravityCompat.START)) {
-            drawer.closeDrawer(GravityCompat.START);
+        if (this.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            this.drawerLayout.closeDrawer(GravityCompat.START);
+        } else if (this.drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            this.drawerLayout.closeDrawer(GravityCompat.END);
         } else {
             super.onBackPressed();
         }
@@ -296,7 +306,7 @@ public abstract class AbstractMainActivity extends AppCompatActivity
     }
 
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Persist the selected item between Activities
         selectedItemId = item.getItemId();
 
@@ -347,8 +357,7 @@ public abstract class AbstractMainActivity extends AppCompatActivity
                 break;
         }
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawer.closeDrawer(GravityCompat.START);
+        this.drawerLayout.closeDrawer(GravityCompat.START);
         return true;
     }
 

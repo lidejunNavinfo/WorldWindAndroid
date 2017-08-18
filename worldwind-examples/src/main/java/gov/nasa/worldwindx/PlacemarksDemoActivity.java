@@ -30,6 +30,7 @@ import java.util.Locale;
 import gov.nasa.worldwind.BasicWorldWindowController;
 import gov.nasa.worldwind.PickedObject;
 import gov.nasa.worldwind.PickedObjectList;
+import gov.nasa.worldwind.WorldWind;
 import gov.nasa.worldwind.geom.Position;
 import gov.nasa.worldwind.layer.RenderableLayer;
 import gov.nasa.worldwind.render.ImageSource;
@@ -40,6 +41,7 @@ import gov.nasa.worldwind.shape.Placemark;
 import gov.nasa.worldwind.shape.PlacemarkAttributes;
 import gov.nasa.worldwind.util.Logger;
 import gov.nasa.worldwind.util.WWUtil;
+import gov.nasa.worldwindx.experimental.AtmosphereLayer;
 
 /**
  * This Activity demonstrates a LOT of Placemarks with varying levels of detail.
@@ -474,7 +476,7 @@ public class PlacemarksDemoActivity extends GeneralGlobeActivity {
 
         private ArrayList<Place> places = new ArrayList<>();
 
-        private RenderableLayer placeLayer = new RenderableLayer();
+        private RenderableLayer placeLayer = new RenderableLayer("Placemarks");
 
         private int numPlacesCreated;
 
@@ -507,7 +509,9 @@ public class PlacemarksDemoActivity extends GeneralGlobeActivity {
         @Override
         protected void onPostExecute(Void notUsed) {
             super.onPostExecute(notUsed);
-            getWorldWindow().getLayers().addLayer(this.placeLayer);
+
+            getLayerManager().addLayerBeforeNamed(AtmosphereLayer.LAYER_NAME, this.placeLayer);
+
             statusText.setText(String.format(Locale.US, "%,d US places created", this.numPlacesCreated));
             getWorldWindow().requestRedraw();
         }
@@ -560,6 +564,7 @@ public class PlacemarksDemoActivity extends GeneralGlobeActivity {
                 placemark.setLevelOfDetailSelector(new PlaceLevelOfDetailSelector(getResources(), place));
                 placemark.setEyeDistanceScaling(true);
                 placemark.setEyeDistanceScalingThreshold(PlaceLevelOfDetailSelector.LEVEL_1_DISTANCE);
+                placemark.setAltitudeMode(WorldWind.CLAMP_TO_GROUND);
 
                 // On a background thread, we can add Placemarks to a RenderableLayer that is
                 // NOT attached to the WorldWindow. If the layer was attached to the WorldWindow

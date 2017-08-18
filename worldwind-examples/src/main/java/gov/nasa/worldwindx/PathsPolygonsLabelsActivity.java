@@ -40,6 +40,7 @@ import gov.nasa.worldwind.shape.ShapeAttributes;
 import gov.nasa.worldwind.shape.TextAttributes;
 import gov.nasa.worldwind.util.Logger;
 import gov.nasa.worldwind.util.WWUtil;
+import gov.nasa.worldwindx.experimental.AtmosphereLayer;
 
 /**
  * This activity demonstrates rendering Labels, Paths and Polygons on the globe. All of the Renderable objects are
@@ -54,7 +55,11 @@ public class PathsPolygonsLabelsActivity extends GeneralGlobeActivity {
     // A component for displaying the status of this activity
     protected TextView statusText = null;
 
-    protected RenderableLayer shapesLayer = new RenderableLayer("Shapes");
+    protected RenderableLayer shapesLayer = new RenderableLayer("Countries");
+
+    protected RenderableLayer roadsLayer = new RenderableLayer("Roads");
+
+    protected RenderableLayer labelsLayer = new RenderableLayer("Labels");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,11 +76,21 @@ public class PathsPolygonsLabelsActivity extends GeneralGlobeActivity {
 
         // Override the World Window's built-in navigation behavior by adding picking support.
         this.getWorldWindow().setWorldWindowController(new PickController());
-        this.getWorldWindow().getLayers().addLayer(this.shapesLayer);
 
         // Load the shapes into the renderable layer
-        statusText.setText("Loading countries....");
+        this.statusText.setText("Loading countries....");
         new CreateRenderablesTask().execute();
+    }
+
+    /**
+     * Adds the layers to the globe.
+     */
+    @Override
+    protected void initializeLayers() {
+        super.initializeLayers();
+        getLayerManager().addLayerBeforeNamed(AtmosphereLayer.LAYER_NAME, this.shapesLayer);
+        getLayerManager().addLayerBeforeNamed(AtmosphereLayer.LAYER_NAME, this.roadsLayer);
+        getLayerManager().addLayerBeforeNamed(AtmosphereLayer.LAYER_NAME, this.labelsLayer);
     }
 
     /**
@@ -114,7 +129,13 @@ public class PathsPolygonsLabelsActivity extends GeneralGlobeActivity {
             super.onProgressUpdate(renderables);
             Renderable shape = renderables[0];
             statusText.setText("Added " + shape.getDisplayName() + " feature...");
-            shapesLayer.addRenderable(shape);
+            if (shape instanceof Polygon) {
+                shapesLayer.addRenderable(shape);
+            } else if (shape instanceof Path) {
+                roadsLayer.addRenderable(shape);
+            } else if (shape instanceof Label) {
+                labelsLayer.addRenderable(shape);
+            }
             getWorldWindow().requestRedraw();
         }
 

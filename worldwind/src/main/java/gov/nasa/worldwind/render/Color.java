@@ -203,6 +203,20 @@ public class Color {
         return result;
     }
 
+    public float[] premultiplyToArray(float[] result, int offset) {
+        if (result == null || result.length - offset < 4) {
+            throw new IllegalArgumentException(
+                Logger.logMessage(Logger.ERROR, "Color", "premultiplyToArray", "missingResult"));
+        }
+
+        result[offset++] = this.red * this.alpha;
+        result[offset++] = this.green * this.alpha;
+        result[offset++] = this.blue * this.alpha;
+        result[offset] = this.alpha;
+
+        return result;
+    }
+
     /**
      * Returns this color's components as a color int. Color ints are stored as packed ints as follows: <code>(alpha <<
      * 24) | (red << 16) | (green << 8) | (blue)</code>. Each component is an 8 bit number between 0 and 255 with 0

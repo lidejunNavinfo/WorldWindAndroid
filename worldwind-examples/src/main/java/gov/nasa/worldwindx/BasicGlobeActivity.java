@@ -6,6 +6,7 @@
 package gov.nasa.worldwindx;
 
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.widget.FrameLayout;
 
 import gov.nasa.worldwind.NavigatorEvent;
@@ -18,14 +19,16 @@ import gov.nasa.worldwind.globe.BasicElevationCoverage;
 import gov.nasa.worldwind.layer.BackgroundLayer;
 import gov.nasa.worldwind.layer.BlueMarbleLandsatLayer;
 import gov.nasa.worldwind.layer.RenderableLayer;
+import gov.nasa.worldwind.render.Color;
+import gov.nasa.worldwind.render.ImageSource;
+import gov.nasa.worldwind.shape.OmnidirectionalSensor;
 import gov.nasa.worldwind.shape.Placemark;
-import gov.nasa.worldwind.shape.VisibilityMockup;
 import gov.nasa.worldwindx.experimental.AtmosphereLayer;
 
 /**
  * Creates a simple view of a globe with touch navigation and a few layers.
  */
-public class BasicGlobeActivity extends AbstractMainActivity {
+public class BasicGlobeActivity extends AbstractMainActivity implements NavigatorListener {
 
     /**
      * This protected member allows derived classes to override the resource used in setContentView.
@@ -36,6 +39,12 @@ public class BasicGlobeActivity extends AbstractMainActivity {
      * The WorldWindow (GLSurfaceView) maintained by this activity
      */
     protected WorldWindow wwd;
+
+    protected OmnidirectionalSensor sensor;
+
+    protected Placemark placemark;
+
+    protected LookAt lastLookAt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,23 +75,20 @@ public class BasicGlobeActivity extends AbstractMainActivity {
         // Setup the World Window's elevation coverages.
         this.wwd.getGlobe().getElevationModel().addCoverage(new BasicElevationCoverage());
 
-        final RenderableLayer mockupLayer = new RenderableLayer();
-        final VisibilityMockup mockupRenderable = new VisibilityMockup(new Position());
-        final Placemark placemark = new Placemark(new Position());
-        placemark.getAttributes().setImageScale(10);
-        mockupLayer.addRenderable(mockupRenderable);
-        mockupLayer.addRenderable(placemark);
-        this.wwd.getLayers().addLayer(mockupLayer);
+        Position pos = new Position(46.202, -122.190, 500);
+        this.sensor = new OmnidirectionalSensor(pos, 10000);
+        this.sensor.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);
+        this.sensor.getAttributes().setInteriorColor(new Color(0, 1, 0, 0.5f));
+        this.placemark = new Placemark(pos);
+        this.placemark.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);
+        this.placemark.getAttributes().setImageSource(ImageSource.fromResource(R.drawable.aircraft_fixwing));
+        this.placemark.getAttributes().setImageScale(2);
+        this.placemark.getAttributes().setDrawLeader(true);
 
-        this.wwd.addNavigatorListener(new NavigatorListener() {
-            @Override
-            public void onNavigatorEvent(WorldWindow wwd, NavigatorEvent event) {
-                LookAt lookAt = event.getNavigator().getAsLookAt(wwd.getGlobe(), new LookAt());
-                mockupRenderable.getPosition().set(lookAt.latitude, lookAt.longitude, 2500);
-                placemark.getPosition().set(mockupRenderable.getPosition());
-                wwd.requestRedraw();
-            }
-        });
+        RenderableLayer mockupLayer = new RenderableLayer();
+        mockupLayer.addRenderable(this.sensor);
+        mockupLayer.addRenderable(this.placemark);
+        this.wwd.getLayers().addLayer(mockupLayer);
     }
 
     @Override
@@ -97,9 +103,56 @@ public class BasicGlobeActivity extends AbstractMainActivity {
         this.wwd.onResume(); // resumes a paused rendering thread
     }
 
-
     @Override
     public WorldWindow getWorldWindow() {
         return this.wwd;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.action_set) {
+            wwd.removeNavigatorListener(this);
+            LookAt navLookAt = wwd.getNavigator().getAsLookAt(wwd.getGlobe(), new LookAt());
+            Position pos = new Position();
+            pos.latitude = navLookAt.latitude;
+            pos.longitude = navLookAt.longitude;
+            sensor.setPosition(pos);
+            placemark.setPosition(pos);
+            wwd.requestRedraw();
+            return true;
+        } else if (id == R.id.action_track) {
+            if (lastLookAt == null) {
+                wwd.addNavigatorListener(this);
+                lastLookAt = wwd.getNavigator().getAsLookAt(wwd.getGlobe(), new LookAt());
+            } else {
+                wwd.removeNavigatorListener(this);
+                lastLookAt = null;
+            }
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onNavigatorEvent(WorldWindow wwd, NavigatorEvent event) {
+        LookAt navLookAt = wwd.getNavigator().getAsLookAt(wwd.getGlobe(), new LookAt());
+
+        Position pos = sensor.getPosition();
+        pos.latitude += navLookAt.latitude - lastLookAt.latitude;
+        pos.longitude += navLookAt.longitude - lastLookAt.longitude;
+        sensor.setPosition(pos);
+        placemark.setPosition(pos);
+
+        pos.altitude += navLookAt.range - lastLookAt.range;
+        sensor.setPosition(pos);
+        placemark.setPosition(pos);
+        //double range = sensor.getRange();
+        //range *= navLookAt.range / lastLookAt.range;
+        //sensor.setRange(range);
+
+        lastLookAt.set(navLookAt);
+        wwd.requestRedraw();
     }
 }

@@ -5,11 +5,18 @@
 
 package gov.nasa.worldwind.draw;
 
+import android.opengl.GLES10Ext;
+import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLES30;
+import android.opengl.GLES31;
+import android.opengl.GLES31Ext;
+import android.opengl.GLES32;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -67,6 +74,12 @@ public class DrawContext {
 
     private Framebuffer scratchFramebuffer;
 
+    private BufferObject unitCircleBuffer;
+
+    private BufferObject unitSphereBuffer;
+
+    private BufferObject unitSphereElements;
+
     private BufferObject unitSquareBuffer;
 
     private ByteBuffer scratchBuffer = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder());
@@ -104,6 +117,7 @@ public class DrawContext {
         this.arrayBufferId = 0;
         this.elementArrayBufferId = 0;
         this.scratchFramebuffer = null;
+        this.unitCircleBuffer = null;
         this.unitSquareBuffer = null;
         Arrays.fill(this.textureId, 0);
     }
@@ -161,8 +175,11 @@ public class DrawContext {
         }
 
         Framebuffer framebuffer = new Framebuffer();
-        Texture colorAttachment = new Texture(1024, 1024, GLES20.GL_RGBA);
-        Texture depthAttachment = new Texture(1024, 1024, GLES20.GL_DEPTH_COMPONENT);
+        Texture colorAttachment = new Texture(1024, 1024, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE);
+        Texture depthAttachment = new Texture(1024, 1024, GLES20.GL_DEPTH_COMPONENT, GLES20.GL_UNSIGNED_INT);
+        // TODO the depth_component format could affect Texture's default parameters
+        depthAttachment.setTexParameter(GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+        depthAttachment.setTexParameter(GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
         framebuffer.attachTexture(this, colorAttachment, GLES20.GL_COLOR_ATTACHMENT0);
         framebuffer.attachTexture(this, depthAttachment, GLES20.GL_DEPTH_ATTACHMENT);
 
@@ -285,6 +302,105 @@ public class DrawContext {
         } else {
             GLES20.glBindBuffer(target, bufferId);
         }
+    }
+
+    public BufferObject unitCircleBuffer() {
+        if (this.unitCircleBuffer != null) {
+            return this.unitCircleBuffer;
+        }
+
+        int slices = 360;
+        double angle = 0;
+        double deltaAngle = 2 * Math.PI / slices;
+        float[] points = new float[slices * 2 + 4];
+        int pos = 2;
+
+        for (int idx = 0, len = points.length - 4; idx < len; angle += deltaAngle) {
+            points[pos++] = (float) Math.cos(angle);
+            points[pos++] = (float) Math.sin(angle);
+        }
+
+        points[pos++] = points[2];
+        points[pos++] = points[3];
+
+        int size = points.length * 4;
+        FloatBuffer buffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        buffer.put(points).rewind();
+
+        BufferObject bufferObject = new BufferObject(GLES20.GL_ARRAY_BUFFER, size, buffer);
+
+        return (this.unitCircleBuffer = bufferObject);
+    }
+
+    public BufferObject unitSphereBuffer() {
+        if (this.unitSphereBuffer != null) {
+            return this.unitSphereBuffer;
+        }
+
+        int numLat = 8;
+        int numLon = 16;
+        double deltaLat = Math.PI / (numLat - 1);
+        double deltaLon = 2 * Math.PI / (numLon - 1);
+        float[] points = new float[numLat * numLon * 3];
+        int pos = 0;
+
+        for (double latIndex = 0, lat = -Math.PI / 2; latIndex < numLat; latIndex++, lat += deltaLat) {
+            double cosLat = Math.cos(lat);
+            double sinLat = Math.sin(lat);
+
+            for (double lonIndex = 0, lon = -Math.PI; lonIndex < numLon; lonIndex++, lon += deltaLon) {
+                double cosLon = Math.cos(lon);
+                double sinLon = Math.sin(lon);
+
+                points[pos++] = (float) (cosLat * sinLon);
+                points[pos++] = (float) (sinLat);
+                points[pos++] = (float) (cosLat * cosLon);
+            }
+        }
+
+        int size = points.length * 4;
+        FloatBuffer buffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        buffer.put(points).rewind();
+
+        return (this.unitSphereBuffer = new BufferObject(GLES20.GL_ARRAY_BUFFER, size, buffer));
+    }
+
+    public BufferObject unitSphereElements() {
+        if (this.unitSphereElements != null) {
+            return this.unitSphereElements;
+        }
+
+        // Allocate a buffer to hold the indices.
+        int numLat = 8;
+        int numLon = 16;
+        int count = ((numLat - 1) * numLon + (numLat - 2)) * 2;
+        short[] elements = new short[count];
+        int pos = 0, vertex = 0;
+
+        for (int latIndex = 0; latIndex < numLat - 1; latIndex++) {
+            // Create a triangle strip joining each adjacent column of vertices, starting in the bottom left corner and
+            // proceeding to the right. The first vertex starts with the left row of vertices and moves right to create
+            // a counterclockwise winding order.
+            for (int lonIndex = 0; lonIndex < numLon; lonIndex++) {
+                vertex = lonIndex + latIndex * numLon;
+                elements[pos++] = (short) (vertex + numLon);
+                elements[pos++] = (short) vertex;
+            }
+
+            // Insert indices to create 2 degenerate triangles:
+            // - one for the end of the current row, and
+            // - one for the beginning of the next row
+            if (latIndex < numLat - 2) {
+                elements[pos++] = (short) vertex;
+                elements[pos++] = (short) ((latIndex + 2) * numLon);
+            }
+        }
+
+        int size = elements.length * 2;
+        ShortBuffer buffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder()).asShortBuffer();
+        buffer.put(elements).rewind();
+
+        return (this.unitSphereElements = new BufferObject(GLES20.GL_ELEMENT_ARRAY_BUFFER, size, buffer));
     }
 
     /**

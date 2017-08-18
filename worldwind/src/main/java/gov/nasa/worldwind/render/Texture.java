@@ -6,7 +6,9 @@
 package gov.nasa.worldwind.render;
 
 import android.graphics.Bitmap;
+import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLES30;
 import android.opengl.GLUtils;
 import android.util.SparseIntArray;
 
@@ -26,6 +28,8 @@ public class Texture implements RenderResource {
     protected int textureHeight;
 
     protected int textureFormat;
+
+    protected int textureType;
 
     protected int textureByteCount;
 
@@ -53,12 +57,13 @@ public class Texture implements RenderResource {
         this.textureWidth = width;
         this.textureHeight = height;
         this.textureFormat = format;
+        this.textureType = type;
         this.textureByteCount = estimateByteCount(width, height, format, type);
         this.texCoordTransform.setToVerticalFlip();
         this.imageBitmap = bitmap;
     }
 
-    public Texture(int width, int height, int format) {
+    public Texture(int width, int height, int format, int type) {
         if (width < 0 || height < 0) {
             throw new IllegalArgumentException(
                 Logger.logMessage(Logger.ERROR, "Texture", "constructor", "invalidWidthOrHeight"));
@@ -67,7 +72,8 @@ public class Texture implements RenderResource {
         this.textureWidth = width;
         this.textureHeight = height;
         this.textureFormat = format;
-        this.textureByteCount = estimateByteCount(width, height, format, GLES20.GL_UNSIGNED_BYTE);
+        this.textureType = type;
+        this.textureByteCount = estimateByteCount(width, height, format, type);
         this.texCoordTransform.setToIdentity();
     }
 
@@ -165,13 +171,10 @@ public class Texture implements RenderResource {
     }
 
     protected void allocTexImage(DrawContext dc) {
-        // Identify the pixel storage type. In the case of depth textures, we must use UNSIGNED_SHORT or UNSIGNED_INT.
-        int type = (this.textureFormat == GLES20.GL_DEPTH_COMPONENT) ? GLES20.GL_UNSIGNED_INT : GLES20.GL_UNSIGNED_BYTE;
-
         // Allocate texture memory for the OpenGL texture 2D object. The texture memory is initialized with 0.
         GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0 /*level*/,
             this.textureFormat, this.textureWidth, this.textureHeight, 0 /*border*/,
-            this.textureFormat, type, null /*pixels*/);
+            this.textureFormat, this.textureType, null /*pixels*/);
     }
 
     protected void loadTexImage(DrawContext dc, Bitmap bitmap) {
@@ -195,6 +198,9 @@ public class Texture implements RenderResource {
 
     protected void setTexParameters(DrawContext dc) {
         int param;
+
+        // TODO refactor to apply all configured tex parameters, setting select ones only as defaults when no text
+        // TODO parameter is configured
 
         // Configure the OpenGL texture minification function. Always use a nearest filtering function in picking mode.
         if (dc.pickMode) {
@@ -258,6 +264,10 @@ public class Texture implements RenderResource {
                         break;
                 }
                 break;
+            case GLES20.GL_UNSIGNED_INT:
+                bytesPerRow = widthPow2 * 4; // 32 bits per pixel
+                break;
+            case GLES20.GL_UNSIGNED_SHORT:
             case GLES20.GL_UNSIGNED_SHORT_5_6_5:
             case GLES20.GL_UNSIGNED_SHORT_4_4_4_4:
             case GLES20.GL_UNSIGNED_SHORT_5_5_5_1:
